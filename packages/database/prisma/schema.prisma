@@ -8,12 +8,493 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum MovementType {
+  OPENING_STOCK
+  PURCHASE_RECEIPT
+  SALE_DELIVERY
+  SALE_RETURN
+  PURCHASE_RETURN
+  TRANSFER_OUT
+  TRANSFER_IN
+  STOCK_OPNAME
+  ADJUSTMENT
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  CREDIT
+}
+
+enum PurchaseStatus {
+  DRAFT
+  ORDERED
+  RECEIVED
+  CANCELLED
+}
+
+enum CashMutationType {
+  IN
+  OUT
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MULTI-TENANCY & USERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tenant {
+  id              String         @id @default(cuid())
+  name            String         // Nama Toko / Distributor
+  subdomain       String         @unique
+  businessPhone   String?
+  address         String?
+  taxNumber       String?        // NPWP Distributor
+  isPkp           Boolean        @default(false)
+  defaultTaxRate  Int            @default(11) // PPN 11%
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  users           User[]
+  warehouses      Warehouse[]
+  products        Product[]
+  priceTiers      PriceTier[]
+  customers       Customer[]
+  suppliers       Supplier[]
+  cashAccounts    CashAccount[]
+  salesInvoices   SalesInvoice[]
+  purchaseOrders  PurchaseOrder[]
+  auditLogs       AuditLog[]
+
+  @@index([subdomain])
+}
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String   
-  name      String?
-  role      String   @default("USER")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String     @id @default(cuid())
+  tenantId    String?
+  warehouseId String?
+  email       String     @unique
+  password    String
+  name        String?
+  role        String     @default("ORDER_CASHIER") // SUPER_ADMIN, OWNER, FINANCE, ORDER_CASHIER, WAREHOUSE, PURCHASING
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  tenant      Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WAREHOUSE & INVENTORY
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Warehouse {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  name            String                 // "Gudang Utama", "Gudang Transit"
+  code            String                 // "GDG-01"
+  address         String?
+  isActive        Boolean                @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  users           User[]
+  stocks          Stock[]
+  stockMovements  StockMovement[]
+  productCosts    WarehouseProductCost[]
+  salesInvoices   SalesInvoice[]
+  purchaseOrders  PurchaseOrder[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model Product {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  sku             String                 // "BRG-001"
+  name            String
+  category        String?
+  brand           String?
+  baseUnitName    String                 // Satuan terkecil: "Pcs", "Kg", "Btl"
+  trackBatch      Boolean                @default(false)
+  minStockAlert   Int                    @default(10) // Dalam satuan dasar
+  isActive        Boolean                @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  units           ProductUnit[]
+  stocks          Stock[]
+  stockMovements  StockMovement[]
+  costs           WarehouseProductCost[]
+  batches         Batch[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, name])
+}
+
+model ProductUnit {
+  id              String                 @id @default(cuid())
+  productId       String
+  name            String                 // "Dus", "Pak", "Pcs"
+  factorToBase    Int                    // Pengali ke base unit (Dus = 144)
+  barcode         String?                // EAN-13 / UPC barcode scanner
+  purchasePrice   BigInt                 @default(0) // Harga beli modal default
+  salePrice       BigInt                 @default(0) // Harga jual eceran/default
+  isBase          Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tierPrices      ProductPriceTier[]
+  invoiceItems    SalesInvoiceItem[]
+  poItems         PurchaseOrderItem[]
+
+  @@index([productId])
+  @@index([barcode])
+}
+
+model PriceTier {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  name            String                 // "Grosir Besar", "Semi Grosir", "Ecer"
+  isDefault       Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customers       Customer[]
+  tierPrices      ProductPriceTier[]
+
+  @@unique([tenantId, name])
+}
+
+model ProductPriceTier {
+  id              String                 @id @default(cuid())
+  productUnitId   String
+  priceTierId     String
+  price           BigInt                 // Harga khusus level tersebut
+
+  productUnit     ProductUnit            @relation(fields: [productUnitId], references: [id], onDelete: Cascade)
+  priceTier       PriceTier              @relation(fields: [priceTierId], references: [id], onDelete: Cascade)
+
+  @@unique([productUnitId, priceTierId])
+}
+
+model Customer {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  code            String                 // "CUST-001"
+  name            String                 // "Toko Berkah Jaya"
+  phone           String?
+  address         String?
+  priceTierId     String
+  creditTermDays  Int                    @default(0) // 0 = Cash, 14, 30 hari
+  creditLimit     BigInt                 @default(0) // Plafon maksimal piutang (0 = tanpa limit)
+  isActive        Boolean                @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  priceTier       PriceTier              @relation(fields: [priceTierId], references: [id])
+  salesInvoices   SalesInvoice[]
+  payments        CustomerPayment[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, name])
+}
+
+model Supplier {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  code            String                 // "SUPP-001"
+  name            String                 // "PT Distributor Makmur Abadi"
+  phone           String?
+  address         String?
+  contactPerson   String?
+  paymentTermDays Int                    @default(0)
+  isActive        Boolean                @default(true)
+  deletedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseOrders  PurchaseOrder[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, name])
+}
+
+model Batch {
+  id              String                 @id @default(cuid())
+  productId       String
+  batchNumber     String                 // "BATCH-2026-X1"
+  expiredDate     DateTime               @db.Date
+  createdAt       DateTime               @default(now())
+
+  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stocks          Stock[]
+  movements       StockMovement[]
+
+  @@unique([productId, batchNumber])
+  @@index([expiredDate])
+}
+
+model Stock {
+  id              String                 @id @default(cuid())
+  warehouseId     String
+  productId       String
+  batchId         String?
+  qtyBase         Int                    @default(0) // Kuantitas dalam satuan dasar
+
+  warehouse       Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch           Batch?                 @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@unique([warehouseId, productId, batchId])
+  @@index([warehouseId, productId])
+}
+
+model WarehouseProductCost {
+  id              String                 @id @default(cuid())
+  warehouseId     String
+  productId       String
+  avgCostPerBase  Decimal                @db.Decimal(18, 4) // HPP moving average eksak
+  lastUpdated     DateTime               @updatedAt
+
+  warehouse       Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([warehouseId, productId])
+}
+
+model StockMovement {
+  id              String                 @id @default(cuid())
+  warehouseId     String
+  productId       String
+  batchId         String?
+  type            MovementType
+  qtyBase         Int                    // Nilai bertanda (+ masuk, - keluar)
+  unitCost        Decimal                @db.Decimal(18, 4) // HPP saat mutasi terjadi
+  sourceDocType   String                 // "SALES_INVOICE", "PURCHASE_RECEIPT", "ADJUSTMENT"
+  sourceDocId     String
+  notes           String?
+  createdById     String
+  createdAt       DateTime               @default(now())
+
+  warehouse       Warehouse              @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch           Batch?                 @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@index([warehouseId, productId, createdAt])
+  @@index([sourceDocType, sourceDocId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PURCHASING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PurchaseOrder {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  poNumber        String                 // "PO/2026/11/0001"
+  supplierId      String
+  warehouseId     String
+  status          PurchaseStatus         @default(DRAFT)
+  subtotal        BigInt
+  taxAmount       BigInt                 @default(0)
+  grandTotal      BigInt
+  orderDate       DateTime               @db.Date
+  expectedDate    DateTime?              @db.Date
+  notes           String?
+  createdById     String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier        Supplier               @relation(fields: [supplierId], references: [id])
+  warehouse       Warehouse              @relation(fields: [warehouseId], references: [id])
+  items           PurchaseOrderItem[]
+
+  @@unique([tenantId, poNumber])
+  @@index([tenantId, supplierId])
+}
+
+model PurchaseOrderItem {
+  id              String                 @id @default(cuid())
+  purchaseOrderId String
+  productUnitId   String
+  qtyOrdered      Int
+  qtyReceived     Int                    @default(0)
+  qtyBase         Int
+  unitCost        BigInt
+  lineTotal       BigInt
+
+  purchaseOrder   PurchaseOrder          @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productUnit     ProductUnit            @relation(fields: [productUnitId], references: [id])
+
+  @@index([purchaseOrderId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SALES & DISTRIBUTION
+// ─────────────────────────────────────────────────────────────────────────────
+
+model SalesInvoice {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  invoiceNumber   String                 // "INV/2026/11/0001"
+  customerId      String
+  warehouseId     String
+  subtotal        BigInt
+  taxAmount       BigInt                 @default(0) // PPN
+  grandTotal      BigInt
+  paidAmount      BigInt                 @default(0) // Total yang sudah dicicil
+  paymentStatus   PaymentStatus          @default(UNPAID)
+  invoiceDate     DateTime               @db.Date
+  dueDate         DateTime               @db.Date
+  paymentMethod   PaymentMethod          @default(CREDIT)
+  overrideLimitBy String?                // Diisi ID Owner jika melewati limit kredit
+  overrideReason  String?
+  isVoid          Boolean                @default(false)
+  voidReason      String?
+  createdById     String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer        Customer               @relation(fields: [customerId], references: [id])
+  warehouse       Warehouse              @relation(fields: [warehouseId], references: [id])
+  items           SalesInvoiceItem[]
+  allocations     PaymentAllocation[]
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, customerId])
+  @@index([tenantId, dueDate])
+}
+
+model SalesInvoiceItem {
+  id              String                 @id @default(cuid())
+  invoiceId       String
+  productUnitId   String
+  qtyOrdered      Int                    // Kuantitas satuan transaksi
+  qtyBase         Int                    // Kuantitas konversi dasar
+  unitPrice       BigInt                 // Harga per satuan transaksi
+  lineTotal       BigInt
+  cogsPerBase     Decimal                @db.Decimal(18, 4) // Snapshot HPP untuk laba kotor
+
+  invoice         SalesInvoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productUnit     ProductUnit            @relation(fields: [productUnitId], references: [id])
+
+  @@index([invoiceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FINANCE, CASH & SETTLEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model CustomerPayment {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  paymentNumber   String                 // "PAY/2026/11/0001"
+  customerId      String
+  cashAccountId   String
+  totalAmount     BigInt
+  paymentDate     DateTime               @db.Date
+  receiptUrl      String?
+  notes           String?
+  isVoid          Boolean                @default(false)
+  createdById     String
+  createdAt       DateTime               @default(now())
+
+  customer        Customer               @relation(fields: [customerId], references: [id])
+  cashAccount     CashAccount            @relation(fields: [cashAccountId], references: [id])
+  allocations     PaymentAllocation[]
+
+  @@index([tenantId, customerId])
+}
+
+model PaymentAllocation {
+  id              String                 @id @default(cuid())
+  paymentId       String
+  invoiceId       String
+  allocatedAmount BigInt
+
+  payment         CustomerPayment        @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice         SalesInvoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([invoiceId])
+}
+
+model CashAccount {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  name            String                 // "Kas Kasir Toko", "Bank BCA Operasional"
+  accountNumber   String?
+  balance         BigInt                 @default(0)
+  isDefault       Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  mutations       CashMutation[]
+  payments        CustomerPayment[]
+
+  @@unique([tenantId, name])
+}
+
+model CashMutation {
+  id              String                 @id @default(cuid())
+  cashAccountId   String
+  type            CashMutationType
+  amount          BigInt
+  sourceDocType   String                 // "AR_PAYMENT", "AP_PAYMENT", "EXPENSE"
+  sourceDocId     String
+  description     String
+  createdById     String
+  createdAt       DateTime               @default(now())
+
+  cashAccount     CashAccount            @relation(fields: [cashAccountId], references: [id], onDelete: Cascade)
+
+  @@index([cashAccountId, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id              String                 @id @default(cuid())
+  tenantId        String
+  userId          String
+  action          String                 // "POST_INVOICE", "OVERRIDE_CREDIT_LIMIT", "VOID_PAYMENT"
+  entityName      String                 // "SalesInvoice", "Customer"
+  entityId        String
+  oldData         Json?
+  newData         Json?
+  reason          String?
+  ipAddress       String?
+  createdAt       DateTime               @default(now())
+
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, entityName, entityId])
+  @@index([tenantId, createdAt])
 }

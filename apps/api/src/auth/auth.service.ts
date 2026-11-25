@@ -20,7 +20,14 @@ export class AuthService {
     });
 
     if (user && (await bcrypt.compare(pass, user.password))) {
-      return { id: user.id, email: user.email, role: user.role };
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        tenantId: user.tenantId,
+        warehouseId: user.warehouseId,
+      };
     }
     return null;
   }
@@ -31,6 +38,9 @@ export class AuthService {
       email: user.email,
       sub: user.id,
       role: user.role,
+      name: user.name,
+      tenantId: user.tenantId,
+      warehouseId: user.warehouseId,
     };
 
     // Access token — short-lived, sent in response body for memory storage
@@ -49,7 +59,10 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        name: user.name,
         role: user.role,
+        tenantId: user.tenantId,
+        warehouseId: user.warehouseId,
       },
       access_token: accessToken,
       refreshToken,

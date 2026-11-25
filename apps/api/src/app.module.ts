@@ -6,6 +6,12 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
+import { MasterModule } from './master/master.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { PurchasingModule } from './purchasing/purchasing.module';
+import { SalesModule } from './sales/sales.module';
+import { FinanceModule } from './finance/finance.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -29,6 +35,12 @@ import { HealthModule } from './health/health.module';
     UsersModule,
     PrismaModule,
     HealthModule,
+    MasterModule,
+    InventoryModule,
+    PurchasingModule,
+    SalesModule,
+    FinanceModule,
+    ReportsModule,
   ],
   providers: [
     {

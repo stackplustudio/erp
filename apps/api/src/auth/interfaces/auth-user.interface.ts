@@ -7,4 +7,7 @@ export class AuthUser {
   id!: string;
   email!: string;
   role!: string;
+  name?: string | null;
+  tenantId?: string | null;
+  warehouseId?: string | null;
 }

@@ -4,7 +4,19 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { api } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
+import { ArrowLeft, Pencil } from "lucide-react";
+import Link from "next/link";
+
+const ROLES = [
+  { value: "OWNER",         label: "Owner / Direktur",    desc: "Akses penuh termasuk HPP dan override kredit" },
+  { value: "FINANCE",       label: "Finance & AR",         desc: "Pelunasan piutang, kas, bank, aging report" },
+  { value: "ORDER_CASHIER", label: "Kasir Toko",           desc: "Transaksi kasir cepat — HPP tersembunyi" },
+  { value: "WAREHOUSE",     label: "Kepala Gudang",        desc: "Stok fisik, batch, transfer — HPP tersembunyi" },
+  { value: "PURCHASING",    label: "Staf Pengadaan",       desc: "Purchase order dan penerimaan barang" },
+  { value: "SUPER_ADMIN",   label: "Super Admin (Sistem)", desc: "Konfigurasi tenant, master data, user" },
+];
 
 export default function EditUserPage() {
   const router = useRouter();
@@ -17,23 +29,18 @@ export default function EditUserPage() {
     name: "",
     email: "",
     password: "",
-    role: "USER",
+    role: "ORDER_CASHIER",
   });
 
   useEffect(() => {
-    // Tarik data lama untuk mengisi form
     const fetchUser = async () => {
       try {
-        const res = await api.get<{
-          name?: string;
-          email?: string;
-          role?: string;
-        }>(`/users/${userId}`);
+        const res = await api.get<{ name?: string; email?: string; role?: string }>(`/users/${userId}`);
         setFormData({
           name: res.data.name || "",
           email: res.data.email || "",
-          password: "", // Kosongkan agar tidak terisi hash
-          role: res.data.role || "USER",
+          password: "",
+          role: res.data.role || "ORDER_CASHIER",
         });
       } catch {
         toast.error("Gagal mengambil data user");
@@ -42,112 +49,138 @@ export default function EditUserPage() {
         setFetching(false);
       }
     };
-    if (userId) {
-      void fetchUser();
-    }
+    if (userId) void fetchUser();
   }, [userId, router]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       await api.patch(`/users/${userId}`, formData);
-      toast.success("Berhasil memperbarui data!");
+      toast.success("Data user berhasil diperbarui");
       router.push("/dashboard/users");
     } catch (error: unknown) {
       const message =
-        (error as { response?: { data?: { message?: string } } })?.response
-          ?.data?.message || "Terjadi kesalahan";
-      toast.error("Gagal: " + message);
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Gagal memperbarui user";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) return <div className="p-8 text-center">Memuat data...</div>;
+  const selectedRole = ROLES.find((r) => r.value === formData.role);
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center py-20 text-brand-ink-muted text-sm">
+        Memuat data user...
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-zinc-50 p-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-zinc-900">Edit User</h1>
-            <p className="text-zinc-500">Perbarui data anggota</p>
-          </div>
-          <Button onClick={() => router.back()} variant="outline">
-            Batal
-          </Button>
+    <div className="space-y-6 max-w-xl">
+      {/* Page Header */}
+      <div>
+        <Link
+          href="/dashboard/users"
+          className="inline-flex items-center gap-1.5 text-xs text-brand-ink-muted hover:text-brand-ink-dark transition-colors mb-3"
+        >
+          <ArrowLeft className="size-3.5" aria-hidden="true" />
+          Kembali ke Manajemen User
+        </Link>
+        <h1 className="text-xl font-bold tracking-tight text-brand-ink-dark">Edit User</h1>
+        <p className="text-sm text-brand-ink-muted mt-0.5">
+          Perbarui data akun dan hak akses karyawan.
+        </p>
+      </div>
+
+      {/* Form Card */}
+      <div className="bg-brand-surface border border-brand-line rounded-xl shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-brand-line flex items-center gap-2.5">
+          <Pencil className="size-4 text-brand-primary" aria-hidden="true" />
+          <span className="font-semibold text-sm text-brand-ink-dark">Edit Informasi Akun</span>
         </div>
 
-        <div className="bg-white rounded-lg shadow border border-zinc-200 p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                Nama Lengkap
-              </label>
-              <input
-                type="text"
-                name="name"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-zinc-300 rounded-md focus:ring-2 focus:ring-zinc-900 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-zinc-300 rounded-md focus:ring-2 focus:ring-zinc-900 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                Password Baru (Opsional)
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-zinc-300 rounded-md focus:ring-2 focus:ring-zinc-900 focus:outline-none"
-                placeholder="Isi jika ingin ganti password"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1">
-                Role Akses
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-zinc-300 rounded-md focus:ring-2 focus:ring-zinc-900 focus:outline-none bg-white"
-              >
-                <option value="USER">User Reguler</option>
-                <option value="ADMIN">Administrator</option>
-              </select>
-            </div>
-            <div className="pt-4 border-t border-zinc-100 flex justify-end">
-              <Button type="submit" disabled={loading}>
-                {loading ? "Menyimpan..." : "Simpan Perubahan"}
-              </Button>
-            </div>
-          </form>
-        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div>
+            <label htmlFor="edit-name" className="block text-xs font-semibold text-brand-ink-dark mb-1.5">
+              Nama Lengkap <span className="text-brand-danger">*</span>
+            </label>
+            <Input
+              id="edit-name"
+              type="text"
+              name="name"
+              required
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Nama karyawan"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-email" className="block text-xs font-semibold text-brand-ink-dark mb-1.5">
+              Alamat Email <span className="text-brand-danger">*</span>
+            </label>
+            <Input
+              id="edit-email"
+              type="email"
+              name="email"
+              required
+              value={formData.email}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-password" className="block text-xs font-semibold text-brand-ink-dark mb-1.5">
+              Password Baru
+              <span className="ml-1 text-brand-ink-muted font-normal">(kosongkan jika tidak diganti)</span>
+            </label>
+            <Input
+              id="edit-password"
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Minimal 6 karakter"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-role" className="block text-xs font-semibold text-brand-ink-dark mb-1.5">
+              Peran (Role) <span className="text-brand-danger">*</span>
+            </label>
+            <select
+              id="edit-role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full h-9 px-3 rounded-lg border border-brand-line bg-brand-background text-sm text-brand-ink-dark outline-none focus:ring-2 focus:ring-brand-primary/40 focus:border-brand-primary appearance-none"
+            >
+              {ROLES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            {selectedRole && (
+              <p className="mt-1.5 text-xs text-brand-ink-muted">{selectedRole.desc}</p>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2 border-t border-brand-line">
+            <Button type="button" variant="outline" size="sm" onClick={() => router.back()}>
+              Batal
+            </Button>
+            <Button type="submit" size="sm" disabled={loading}>
+              {loading ? "Menyimpan..." : "Simpan Perubahan"}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

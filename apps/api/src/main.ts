@@ -3,6 +3,12 @@ import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
+// Support BigInt in JSON serialization
+
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
@@ -21,7 +27,7 @@ async function bootstrap() {
   // Whitelisted CORS
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   app.enableCors({
-    origin: frontendUrl,
+    origin: [frontendUrl, 'http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   });
 

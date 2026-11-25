@@ -1,295 +1,172 @@
-# 🚀 Stack Plus Studio - Core Engine V1.0 (Fullstack Monorepo)
+# 🚀 StackPlus ERP — Multi-Tenant Distribution & Wholesale ERP System
 
-> **Status Core Engine**: Production Ready · **Terakhir Diperbarui**: 16 November 2026
+> **Status Proyek**: Production Ready · **Versi**: 1.0.0 · **Lisensi**: Proprietary (Stack Plus Studio)
 
-Boilerplate Fullstack Web Development kelas *Enterprise* dan *Production-Ready* yang dirancang khusus untuk mempercepat inisiasi proyek klien di **Stack Plus Studio**.
-
-Dibangun dengan arsitektur **Monorepo (Turborepo)** yang memisahkan:
-
-* **Frontend**: **Next.js 16** (App Router, Tailwind CSS v4, Axios Interceptors, React Hot Toast)
-* **Backend**: **NestJS 11** (Modular Architecture, Helmet, Rate Limiter Throttler, RolesGuard RBAC, IDOR Protection)
-* **Database**: **PostgreSQL** (Supabase / Neon / Docker Local) via **Prisma ORM v5**
-* **Testing & QA**: **Jest** (Unit & Coverage > 70%), **Supertest** (API E2E & SQLi Injection Prevention), **Playwright** (Web Smoke Tests), dan **k6** (Load & Performance Testing)
-* **CI/CD & Security**: **GitHub Actions** (Quality Gate, Docker Validation, Gitleaks Secret Detection, Trivy Vulnerability Scan)
-* **Workspace Management**: **pnpm workspaces** & **Turborepo**
-
-Seluruh komponen berada dalam satu *repository* terintegrasi sehingga proses pengembangan, pengujian otomatis, audit keamanan, hingga deployment dapat dikelola secara terstruktur, aman, dan konsisten.
+**StackPlus ERP** adalah platform Enterprise Resource Planning (ERP) modern berbasis web yang dirancang khusus untuk bisnis distributor, grosir, dan FMCG (*Fast-Moving Consumer Goods*). Dibangun dengan arsitektur **Turborepo Monorepo** kelas *enterprise*, sistem ini mendukung multi-tenant (multi-perusahaan/cabang), multi-satuan bertingkat (*multi-tier UOM*), kalkulasi HPP *Moving Average* otomatis, pelacakan kedaluwarsa berbasis FEFO (*First-Expired, First-Out*), dan kasir POS berkecepatan tinggi.
 
 ---
 
-# 📚 Indeks Dokumentasi Lengkap (`docs/`)
-
-Maincore dilengkapi rangkaian dokumentasi operasional dan teknis yang berada di direktori [`docs/`](./docs):
-
-| Dokumen | Deskripsi |
-|---|---|
-| 🏛️ [**`docs/architecture.md`**](./docs/architecture.md) | **Arsitektur Sistem Menyeluruh**: Diagram topologi, aliran data, lapisan keamanan, auth flow, dan skema deployment. |
-| 🛡️ [**`docs/security-rules.md`**](./docs/security-rules.md) | **Aturan & Standar Keamanan**: 7 lapisan keamanan, RBAC, proteksi IDOR, rate limiter, dan checklist backend/frontend. |
-| 💻 [**`docs/coding-standards.md`**](./docs/coding-standards.md) | **Standar Koding Developer**: Konvensi penamaan, struktur modul NestJS, DTO, dan pola komponen React/Axios. |
-| 🗄️ [**`docs/database-standards.md`**](./docs/database-standards.md) | **Standar Database & Prisma**: Skema PostgreSQL, cuid(), migrasi SQL, seeding akun, dan isolasi test database. |
-| 📋 [**`docs/prd-template.md`**](./docs/prd-template.md) | **Template PRD Terisi**: Format PRD terisi contoh nyata (Given-When-Then & RBAC) siap pakai untuk proyek baru. |
-| 📋 [**`docs/newproject.md`**](./docs/newproject.md) | **SOP Memulai Proyek Baru**: Panduan langkah demi langkah inisiasi proyek klien dari template Core System. |
-| 🚀 [**`docs/deployment.md`**](./docs/deployment.md) | **Panduan Deployment**: Vercel (web), Railway (API), Neon/Supabase (PostgreSQL), dan konfigurasi variabel lingkungan. |
-| 🎨 [**`docs/ui.md`**](./docs/ui.md) | **UI Design System**: Token warna, tipografi Inter, tombol pill, dan aturan UI. |
-| 🤝 [**`docs/handover.md`**](./docs/handover.md) | **Protokol Serah-Terima (Handover)**: Prosedur cepat 5 menit onboarding dan rules of engagement junior developer. |
-| 🧪 [**`docs/testing-runbook.md`**](./docs/testing-runbook.md) | **Buku Panduan Testing**: Panduan eksekusi Unit Test, Coverage (>70%), E2E Security, dan safety guard database. |
-| ⚡ [**`docs/perf-testing.md`**](./docs/perf-testing.md) | **Metodologi Performance Testing**: Panduan pengujian beban menggunakan k6 (smoke, load, stress, spike, soak). |
-| 🛡️ [**`docs/security-scanning.md`**](./docs/security-scanning.md) | **Security Scanning**: Panduan audit secret detection (Gitleaks) dan vulnerability scan (Trivy). |
-| 🔄 [**`docs/ci-cd.md`**](./docs/ci-cd.md) | **Pipeline CI/CD**: Rincian alur otomatisasi GitHub Actions (`ci.yml` dan `security.yml`). |
-
----
-
-# 🛠️ Tech Stack Utama
-
-## Arsitektur & Tooling
-| Teknologi | Fungsi |
-|---|---|
-| **Turborepo** | Orkestrasi build, caching, dan pipeline task monorepo |
-| **pnpm** | Package manager efisien dan workspace boundary management |
-| **Docker** | Multi-stage hardened build dengan non-root user `node` & healthcheck probe |
-| **GitHub Actions** | Otomasi quality gate, build validation, dan security scanning |
-
-## Frontend — `apps/web`
-| Teknologi | Fungsi |
-|---|---|
-| **Next.js 16** | Framework frontend React dengan App Router |
-| **Tailwind CSS v4** | Styling berbasis utility class CSS-first sesuai token [`docs/ui.md`](./docs/ui.md) |
-| **Axios** | HTTP client terpusat dengan automatic Bearer cookie injection |
-| **React Hot Toast** | Notifikasi umpan balik aksi pengguna (tanpa `alert()`) |
-| **Playwright** | Browser end-to-end testing untuk frontend |
-
-## Backend — `apps/api`
-| Teknologi | Fungsi |
-|---|---|
-| **NestJS 11** | Framework backend modular enterprise |
-| **Passport & JWT** | Dual-token authentication (Access Token + Refresh Token HttpOnly) |
-| **Helmet** | HTTP security headers (CSP, XSS, Clickjacking defense) |
-| **Throttler** | Rate limiting (Global 100 req/min, Login endpoint 5 req/min) |
-| **class-validator** | Mass-assignment defense & strict request payload validation |
-| **Jest & Supertest** | Unit testing (coverage threshold > 70%) & E2E API security tests |
-
-## Database — `packages/database`
-| Teknologi | Fungsi |
-|---|---|
-| **Prisma ORM v5** | Object-Relational Mapping & query builder aman |
-| **PostgreSQL** | Database relasional (Supabase, Neon, atau Local Docker) |
-| **Prisma Migrations** | Version control skema SQL database |
-
----
-
-# 📁 Struktur Direktori Monorepo
+## 🏛️ Arsitektur Monorepo & Tech Stack
 
 ```text
-stackplus-core/
+web-erp/
 ├── apps/
-│   ├── api/                    # Backend API (NestJS 11)
+│   ├── api/                    # Backend REST API (NestJS 11, Helmet, JWT, Throttler)
 │   │   ├── src/
-│   │   │   ├── auth/           # Modul Auth, JWT, Guards, Decorators
-│   │   │   ├── users/          # Modul Users (Blueprint CRUD, RBAC, IDOR fix)
-│   │   │   ├── health/         # Endpoint GET /health
-│   │   │   ├── prisma/         # PrismaService singleton
-│   │   │   ├── app.module.ts   # Root Module (Config & Throttler global)
-│   │   │   └── main.ts         # Bootstrap (Helmet, CORS, ValidationPipe)
-│   │   ├── test/               # E2E Supertest & Test Safety Guard
-│   │   └── Dockerfile          # Hardened multi-stage container build
+│   │   │   ├── auth/           # Otentikasi JWT, Multi-Tenant Guard, RBAC Roles
+│   │   │   ├── master/         # Master Data (Produk, Satuan UOM, Kontak, Gudang)
+│   │   │   ├── inventory/      # Stok, FEFO Batching, Moving Average HPP
+│   │   │   ├── sales/          # Kasir Cepat POS, Faktur Penjualan, Credit Limit Guard
+│   │   │   ├── purchasing/     # Purchase Order (PO) & Penerimaan Barang (GR)
+│   │   │   ├── finance/        # Kas & Bank, Multi-Invoice Payment, AR Aging
+│   │   │   └── reports/        # Laba Kotor per Faktur, Laba Rugi (P&L)
+│   │   └── test/               # Jest Unit Tests & Supertest E2E Security Tests
 │   │
-│   └── web/                    # Frontend Web (Next.js 16)
+│   └── web/                    # Frontend Web App & Landing Page (Next.js 16, Tailwind v4)
 │       ├── src/
-│       │   ├── app/            # App Router pages & route groups
-│       │   ├── components/     # UI Design System components
-│       │   ├── lib/            # Axios API client (@/lib/axios)
-│       │   └── proxy.ts        # Route protection proxy
-│       └── e2e/                # Playwright smoke test specs
+│       │   ├── app/            # App Router (Landing Page, Auth, Dashboard Modul)
+│       │   ├── components/     # UI Design System (Pill buttons, Cards, Badges)
+│       │   └── lib/            # Axios instance terpusat dengan Cookie Auth
+│       └── e2e/                # Playwright End-to-End Automation Tests
 │
 ├── packages/
-│   └── database/               # Shared Database Package
-│       ├── prisma/
-│       │   ├── schema.prisma   # Skema Prisma terpusat
-│       │   ├── migrations/     # Riwayat migrasi SQL
-│       │   └── seed.ts         # Database seeder awal
-│       └── index.ts            # Prisma client export
+│   └── database/               # Prisma ORM v5 Schema, Migrations, & Seed Data FMCG
 │
-├── perf/                       # Performance Testing Suite (k6)
-│   └── k6/
-│       ├── scenarios/          # smoke.js, load.js, stress.js, spike.js, soak.js
-│       └── lib/                # Config & safety guard pencegah target produksi
-│
-├── docs/                       # Dokumentasi arsitektur, UI, dan SOP
-├── .github/workflows/          # CI/CD Workflows (ci.yml & security.yml)
-├── .env.example                # Template konfigurasi environment terpadu
-├── .gitleaks.toml              # Allowlist aturan scan rahasia Gitleaks
-├── .trivyignore                # Rule ignore scanner Trivy
-├── turbo.json                  # Konfigurasi pipeline Turborepo
-└── pnpm-workspace.yaml         # Definisi workspace pnpm
+├── docs/                       # Dokumentasi Teknis, Desain UI, & SOP Testing
+└── .github/workflows/          # Pipeline Otomasi CI/CD (Quality Gate & Security Scan)
 ```
+
+### Ringkasan Teknologi Utama
+| Layer | Komponen & Versi | Deskripsi & Peran |
+|---|---|---|
+| **Frontend** | Next.js 16 (React 19, Turbopack) | App Router modern, server & client components, proxy API rewrite |
+| **Styling** | Tailwind CSS v4 | Utility-first CSS sesuai design tokens [`docs/ui.md`](./docs/ui.md) |
+| **Backend** | NestJS 11 | Arsitektur modular, Dependency Injection, ValidationPipe |
+| **Database** | PostgreSQL + Prisma ORM v5 | Skema relasional multi-tenant, migrasi SQL, atomik transaksi |
+| **Keamanan** | Helmet, Throttler, JWT, RBAC | Proteksi IDOR, sanitasi input, rate limiting, dual-token auth |
+| **Testing** | Jest, Supertest, Playwright | Unit Test (coverage > 70%), API Security E2E, Browser UI E2E |
+| **Tooling** | Turborepo & pnpm v9 | Build caching, remote execution, pipeline task monorepo |
 
 ---
 
-# ⌨️ Daftar Perintah Utama (Workspace Scripts)
+## 📦 Fitur Unggulan (PRD Milestone 1 — 5)
 
-Seluruh perintah dijalankan dari **root folder monorepo**:
+### 1. Fondasi Multi-Tenant & Multi-Satuan (UOM Bertingkat)
+- **Multi-Tenant Isolation**: Setiap entitas bisnis terisolasi secara aman menggunakan `tenantId` pada setiap baris data.
+- **Hierarki Satuan Bertingkat**: Konversi dinamis satuan barang bertingkat (contoh: 1 Dus = 12 Pak = 144 Pcs) dengan konversi ke unit terkecil secara presisi.
+- **Multi-Tier Harga Jual**: Mendukung variasi harga bertingkat untuk kategori pelanggan berbeda (*Retail*, *Semi-Grosir*, *Grosir*).
 
-### Pengembangan & Build
-```bash
-# Menjalankan frontend (localhost:3000) dan backend (localhost:3001) secara bersamaan
-pnpm dev
+### 2. Multi-Gudang & Inventori FEFO (Moving Average HPP)
+- **FEFO Batch Tracking**: Pelacakan nomor batch produksi dan tanggal kedaluwarsa (*expiry date*) untuk mencegah produk basi keluar ke pelanggan.
+- **Kalkulasi HPP Dinamis**: Perhitungan Harga Pokok Penjualan (HPP) otomatis menggunakan metode rata-rata tertimbang (*Moving Average*) setiap kali terjadi transaksi pembelian baru.
+- **Penerimaan Barang PO**: Alur pemesanan pembelian (PO) dan penerimaan fisik barang (*Goods Receipt*) yang langsung memperbarui stok fisik dan nilai HPP gudang.
 
-# Membangun build produksi untuk semua aplikasi
-pnpm build
-```
+### 3. Kasir Penjualan Cepat (Fast POS) & Guard Limit Kredit
+- **Keyboard-Driven POS**: Akses cepat kasir dengan hotkey keyboard (`F2` Cari Pelanggan, `F4` Tambah Barang, `F9` Simpan/Bayar) dan kompatibilitas penuh dengan USB Barcode Scanner.
+- **Credit Limit Enforcement (FR-004)**: Penolakan otomatis transaksi tempo jika sisa batas kredit pelanggan terlampaui, dilengkapi mekanisme *Manager/Owner Override* yang tercatat di audit log.
+- **Snapshot HPP Real-Time**: HPP dicatat pada saat faktur diterbitkan untuk menjamin akurasi laporan laba kotor historis.
 
-### Quality Gates & Validasi Kode
-```bash
-# Memeriksa integritas tipe TypeScript di semua paket
-pnpm typecheck
+### 4. Manajemen Piutang (AR Aging) & Kas Multi-Akun
+- **Pelunasan Multi-Invoice (FR-005)**: Pembayaran piutang pelanggan dapat dialokasikan ke beberapa faktur sekaligus dalam satu kali transaksi pembayaran.
+- **Buku Kas & Bank**: Pencatatan mutasi kas masuk dan kas keluar lintas rekening kas toko/bank.
+- **Laporan Umur Piutang (AR Aging)**: Pengelompokan piutang jatuh tempo dalam rentang waktu: *Belum Jatuh Tempo*, *1–30 Hari*, *31–60 Hari*, dan *>60 Hari*.
+- **Retur Penjualan (FR-007)**: Penanganan pengembalian barang rusak atau salah kirim dengan pemulihan stok dan pengurangan saldo piutang.
 
-# Menjalankan linting (gate checking tanpa autofix)
-pnpm lint
-
-# Menjalankan linting dengan perbaikan otomatis (khusus developer lokal)
-pnpm --filter api run lint:fix
-```
-
-### Pengujian Otomatis (Automated Tests)
-```bash
-# Menjalankan seluruh unit test backend
-pnpm test
-
-# Menjalankan unit test dengan laporan cakupan kode (coverage gate > 70%)
-pnpm test:cov
-
-# Menjalankan API E2E & security integration tests
-pnpm test:e2e
-
-# Menjalankan frontend E2E browser tests (Playwright)
-pnpm --filter web test:e2e
-```
-
-### Database Management (Prisma)
-```bash
-# Generate Prisma Client setelah mengubah schema.prisma
-pnpm db:generate
-
-# Mendorong perubahan schema.prisma ke database pengembangan
-pnpm db:push
-
-# Mengisi database dengan akun seeder default
-pnpm --filter @cahyodev/database prisma db seed
-```
-
-### Pengujian Beban & Performa (k6)
-```bash
-pnpm perf:smoke    # Uji verifikasi dasar (1-5 VU)
-pnpm perf:load     # Uji beban target normal
-pnpm perf:stress   # Uji batas daya tahan sistem
-pnpm perf:spike    # Uji lonjakan trafik mendadak
-pnpm perf:soak     # Uji ketahanan memori jangka panjang
-```
+### 5. Laporan Finansial Manajerial & Demo Showroom
+- **Laporan Laba Kotor per Faktur**: Rincian margin keuntungan kotor faktur per faktur (*Omzet vs HPP vs Gross Profit*).
+- **Laporan Laba Rugi (P&L)**: Ringkasan pendapatan, beban pokok penjualan, beban operasional, dan laba bersih usaha.
+- **1-Click Demo Showroom**: 6 akun demo siap pakai di halaman login (`/login`) untuk presentasi klien instan (Trial, Owner, Finance, Kasir, Gudang, Purchasing).
 
 ---
 
-# ⚙️ Panduan Setup Cepat (Quick Start)
+## ⚡ Panduan Memulai Cepat (Quick Start)
 
-### 1. Prasyarat Sistem
-Pastikan lingkungan lokal memiliki:
-* **Node.js**: versi 20 LTS atau lebih baru (`node -v`)
-* **pnpm**: versi 9.x (`pnpm -v`)
-* **Git**: (`git -v`)
-* **Database PostgreSQL**: Supabase, Neon, atau Docker container lokal
+### Prasyarat Sistem
+- **Node.js**: Versi `>= 20.x`
+- **pnpm**: Versi `>= 9.x` (`npm install -g pnpm`)
+- **PostgreSQL**: Versi `>= 15.x` (Local, Docker, Supabase, atau Neon)
 
-### 2. Instalasi Dependensi
+### 1. Kloning & Instalasi Dependensi
 ```bash
-git clone git@github.com-stackplustudio:stackplustudio/stackplustudio-core.git
-cd stackplus-core
+git clone <repository-url>
+cd web-erp
 pnpm install
 ```
 
-### 3. Konfigurasi Environment Variables
-Salin template environment di root folder:
+### 2. Konfigurasi Variabel Lingkungan
+Salin file `.env.example` ke `.env` di root direktori serta di `apps/api/.env` dan `apps/web/.env.local`:
 ```bash
 cp .env.example .env
 ```
-Sesuaikan nilainya:
+Pastikan `DATABASE_URL` mengarah ke database PostgreSQL Anda:
 ```env
-# Database PostgreSQL
-DATABASE_URL="postgresql://postgres:password@localhost:5432/maincore_db?schema=public"
-DIRECT_URL="postgresql://postgres:password@localhost:5432/maincore_db?schema=public"
-
-# Keamanan JWT (Ganti dengan string acak minimal 32 karakter)
-JWT_SECRET="ganti_dengan_jwt_secret_rahasia_minimal_32_karakter!"
-JWT_REFRESH_SECRET="ganti_dengan_refresh_secret_rahasia_minimal_32_karakter!"
-JWT_EXPIRES_IN="1h"
-JWT_REFRESH_EXPIRES_IN="7d"
-
-# Port & URL
-PORT=3001
-FRONTEND_URL="http://localhost:3000"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/web_erp?schema=public"
+JWT_SECRET="super-secret-jwt-key-minimum-32-characters-long"
+JWT_REFRESH_SECRET="super-secret-refresh-jwt-key-32-characters"
 NEXT_PUBLIC_API_URL="http://localhost:3001"
 ```
 
-### 4. Setup Database & Seeding
+### 3. Migrasi & Seeding Data FMCG
+Jalankan migrasi skema database dan masukkan data simulasi FMCG:
 ```bash
-# Generate client dan sinkronkan schema
 pnpm db:generate
 pnpm db:push
-
-# Jalankan seeder akun awal
-pnpm --filter @cahyodev/database prisma db seed
+pnpm --filter @cahyodev/database db:seed
 ```
 
-Akun default hasil seeding (sesuai `packages/database/prisma/seed.ts`):
-* **Admin Default**: `admin@stackplus.studio` / `password123` (Nama: `Budi Cahyono`, Role: `ADMIN`)
-*(Password telah di-hash otomatis menggunakan bcrypt salt rounds 10)*
-
-### 5. Jalankan Development Server
+### 4. Menjalankan Aplikasi dalam Mode Pengembangan
+Jalankan frontend dan backend secara bersamaan menggunakan satu perintah root:
 ```bash
 pnpm dev
 ```
-Akses di browser:
-* **Frontend Web**: `http://localhost:3000`
-* **Backend API**: `http://localhost:3001`
-* **Health Check Probe**: `http://localhost:3001/health`
+Aplikasi akan aktif di:
+- **Landing Page & Web App**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:3001](http://localhost:3001)
+- **API Health Check**: [http://localhost:3001/health](http://localhost:3001/health)
 
 ---
 
-# 🔐 Arsitektur Keamanan yang Diterapkan
+## 🧪 Pengujian Otomatis & Standar Kualitas
 
-Sistem keamanan Maincore telah melalui audit komprehensif dan *hardening* berlapis:
+Sistem dilengkapi rangkaian pengujian otomatis bertingkat sesuai [docs/testing-runbook.md](./docs/testing-runbook.md):
 
-1. **Helmet HTTP Headers**: Menyematkan header keamanan browser (CSP, HSTS, X-Content-Type-Options, X-Frame-Options).
-2. **Rate Limiting Terisolasi**: Dilindungi oleh `ThrottlerGuard` global (100 req/menit) dan proteksi khusus brute-force pada `POST /auth/login` (maksimal 5 req/menit).
-3. **Mass-Assignment Defense**: `ValidationPipe` disetel dengan `whitelist: true` dan `forbidNonWhitelisted: true` untuk menolak request dengan parameter tak dikenal.
-4. **IDOR & Authorization Control**: Pengguna ber-role `USER` hanya dapat membaca dan mengubah profil miliknya sendiri (`assertSelfOrAdmin`), sedangkan operasi massal/manajemen role dikunci khusus untuk `@Roles('ADMIN')`.
-5. **Safe Secret Management**: Semua kunci JWT divalidasi saat startup melalui `ConfigService.getOrThrow()` tanpa fallback hardcoded.
-6. **Hardened Docker Container**: Image backend berjalan menggunakan unprivileged user `USER node` dan dilengkapi pemeriksaan kesehatan berkala via `HEALTHCHECK`.
-7. **Test Isolation Guard**: Pengujian lokal dilindungi oleh `test-safety.guard.ts` yang membatalkan eksekusi jika `DATABASE_URL` terdeteksi mengarah ke database cloud produksi.
+```bash
+# 1. Typecheck TypeScript seluruh paket
+pnpm typecheck
 
----
+# 2. Linting kode (ESLint + Prettier)
+pnpm lint
 
-# 🚀 SOP Pengembangan Fitur Baru
+# 3. Unit Test Backend & Coverage (Jest)
+pnpm test:cov
 
-Untuk menambahkan modul bisnis baru (misal: Courses, Products), **WAJIB** mengikuti alur kerja berikut:
+# 4. API Security & E2E Integration (Supertest)
+pnpm --filter api test:e2e
 
-1. **Definisikan Skema Database**:
-   Tambahkan model baru di [`packages/database/prisma/schema.prisma`](./packages/database/prisma/schema.prisma), lalu jalankan `pnpm db:push` dan `pnpm db:generate`.
-2. **Generate Modul Backend**:
-   Masuk ke folder `apps/api` dan gunakan CLI NestJS:
-   ```bash
-   cd apps/api
-   npx @nestjs/cli g resource <nama_modul>
-   ```
-3. **Amankan Endpoint**:
-   Tambahkan `@UseGuards(JwtAuthGuard, RolesGuard)` pada controller dan terapkan `@Roles('ADMIN')` jika rute memerlukan hak akses khusus.
-4. **Bangun Tampilan Frontend**:
-   Gunakan Route Groups di `apps/web/src/app/(dashboard)/<nama_modul>/` sesuai visual identity di [`docs/ui.md`](./docs/ui.md). Selalu gunakan `import { api } from "@/lib/axios"` dan `import toast from 'react-hot-toast'`.
-5. **Validasi Quality Gates**:
-   Jalankan `pnpm typecheck`, `pnpm lint`, dan `pnpm test:cov` sebelum membuat commit atau Pull Request.
+# 5. Browser End-to-End Testing (Playwright)
+pnpm --filter web test:e2e
 
-Panduan detail tersedia di [**`docs/newproject.md`**](./docs/newproject.md).
+# 6. Kompilasi Produksi (Production Build)
+pnpm build
+```
 
 ---
 
-# ❤️ Credits & Kontribusi
+## 🔄 Pipeline CI/CD (GitHub Actions)
 
-Dikembangkan dan dipelihara secara resmi oleh **Stack Plus Studio Core Engineering Team**.
-Hak Cipta © 2026 Stack Plus Studio. Seluruh hak cipta dilindungi undang-undang.
+Setiap *Pull Request* atau *Push* ke branch `main`, `feat/*`, `fix/*`, dan `chore/*` otomatis menjalankan alur verifikasi mutu di `.github/workflows/ci.yml`:
+1. **Setup Environment**: Node.js 20, pnpm v9, PostgreSQL 16 container.
+2. **Database Migration**: Generate Prisma Client & Migrate Test DB.
+3. **Typecheck & Lint**: Validasi tipe data ketat dan standar kode ESLint.
+4. **Unit & Security Tests**: Eksekusi seluruh suite pengujian dengan pelaporan coverage.
+5. **API E2E Tests**: Pengujian endpoint kritis terhadap ancaman SQLi dan validasi payload.
+6. **Production Build**: Kompilasi artefak web Next.js dan NestJS API.
+7. **Docker Validation**: Pengecekan multi-stage Dockerfile untuk container deployment.
+8. **Security Scan (`security.yml`)**: Pemindaian rahasia bocor (*Gitleaks*) dan kerentanan dependensi (*Trivy*).
+
+---
+
+## 📄 Hak Cipta & Lisensi
+
+Dikembangkan oleh **Stack Plus Studio**. Hak Cipta Dilindungi Undang-Undang.
+Dokumentasi internal dan standar arsitektur dapat diakses di folder [`docs/`](./docs).
